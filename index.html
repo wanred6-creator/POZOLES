@@ -7,7 +7,7 @@
     <meta name="theme-color" content="#d9534f">
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-        body { background-image: url('negocio.jpg'); background-size: cover; background-position: center; background-attachment: fixed; padding-bottom: 100px; }
+        body { background-image: url('negocio.jpg'); background-size: cover; background-position: center; background-attachment: fixed; padding-bottom: 110px; }
         header { background-image: linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.5)), url('negocio.jpg'); background-size: cover; background-position: center; color: white; padding: 30px 18px; text-align: center; font-size: 1.5rem; font-weight: bold; cursor: pointer; user-select: none; }
         .container { padding: 20px; max-width: 600px; margin: -20px auto 20px auto; background: rgba(255, 255, 255, 0.95); border-radius: 20px 20px 0 0; }
         .btn-admin { background: #333; color: white; border: none; padding: 10px; width: 100%; border-radius: 8px; margin-bottom: 10px; cursor: pointer; font-weight: bold; }
@@ -28,9 +28,15 @@
         .option-pill { padding: 8px 12px; background:#eee; border-radius:15px; cursor:pointer; font-size:0.8rem; border: 1px solid #ddd; }
         .option-pill.active { background: #d9534f; color: white; border-color: #d9534f; }
         
-        .bottom-bar { position: fixed; bottom: 0; width: 100%; background: white; padding: 10px; border-top: 1px solid #ddd; max-width: 600px; left: 50%; transform: translateX(-50%); z-index: 5; display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; }
+        /* Barra Inferior Múltiple (Menú General) */
+        .bottom-bar-multi { position: fixed; bottom: 0; width: 100%; background: white; padding: 10px; border-top: 1px solid #ddd; max-width: 600px; left: 50%; transform: translateX(-50%); z-index: 5; display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; }
         .bottom-btn { background: #d9534f; color: white; border: none; padding: 8px 2px; border-radius: 6px; font-size: 0.7rem; font-weight: bold; cursor: pointer; text-align: center; }
         .bottom-btn.llevar { background: #333; }
+
+        /* Barra Flotante de Previsualización (Modo QR por Mesa) */
+        .bottom-bar-single { position: fixed; bottom: 15px; width: calc(100% - 30px); background: #25d366; color: white; padding: 12px 20px; border-radius: 12px; max-width: 570px; left: 50%; transform: translateX(-50%); z-index: 5; display: flex; align-items: center; justify-content: space-between; cursor: pointer; box-shadow: 0 4px 15px rgba(0,0,0,0.25); font-weight: bold; transition: transform 0.2s; }
+        .bottom-bar-single:active { transform: translateX(-50%) scale(0.98); }
+
         .qr-card { background: white; padding: 10px; border-radius: 8px; margin-bottom: 10px; border: 1px solid #ddd; text-align: center; }
     </style>
 </head>
@@ -72,7 +78,7 @@
             <p style="font-size: 0.75rem; color: #666; margin-bottom: 8px;">Pega tu enlace base de GitHub (ej: https://usuario.github.io/repo/):</p>
             <div style="display: flex; gap: 6px; margin-bottom: 10px;">
                 <input type="text" id="siteUrlInput" placeholder="https://tu-usuario.github.io/tu-repo/" style="flex: 1; padding: 8px; border: 1px solid #ccc; border-radius: 6px; font-size: 0.8rem;">
-                <button onclick="guardar yGenerarQRs()" style="background: #333; color: white; border: none; padding: 8px 12px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 0.8rem;">Generar</button>
+                <button onclick="guardarYGenerarQRs()" style="background: #333; color: white; border: none; padding: 8px 12px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 0.8rem;">Generar</button>
             </div>
             <div id="allQrContainer" style="display: none; margin-top: 10px;"></div>
         </div>
@@ -81,13 +87,25 @@
         <button class="btn-admin" style="background:#666; margin-top:20px" onclick="resetStats()">🗑️ Borrar Historial de Ventas</button>
     </div>
 
-    <!-- Barra Inferior con 5 Botones -->
-    <div class="bottom-bar">
+    <!-- Barra Inferior Múltiple (Solo menú general) -->
+    <div class="bottom-bar-multi" id="multiTableBar">
         <button class="bottom-btn" onclick="abrirCart('Mesa 1')" id="btn-Mesa 1">M1 (0)</button>
         <button class="bottom-btn" onclick="abrirCart('Mesa 2')" id="btn-Mesa 2">M2 (0)</button>
         <button class="bottom-btn" onclick="abrirCart('Mesa 3')" id="btn-Mesa 3">M3 (0)</button>
         <button class="bottom-btn" onclick="abrirCart('Mesa 4')" id="btn-Mesa 4">M4 (0)</button>
         <button class="bottom-btn llevar" onclick="abrirCart('Para llevar')" id="btn-Para llevar">Llevar (0)</button>
+    </div>
+
+    <!-- Barra Flotante de Previsualización (Cuando entran por QR de Mesa) -->
+    <div class="bottom-bar-single" id="singleCartBar" onclick="abrirCart(activeTable)" style="display: none;">
+        <div style="display: flex; align-items: center; gap: 10px;">
+            <span style="font-size: 1.4rem;">🛒</span>
+            <div>
+                <div style="font-size: 0.75rem; opacity: 0.9;" id="barTableName">Mi Pedido</div>
+                <div style="font-size: 0.95rem;" id="barItemsText">0 productos seleccionados</div>
+            </div>
+        </div>
+        <div style="font-size: 1.1rem; background: rgba(0,0,0,0.15); padding: 5px 10px; border-radius: 8px;" id="barTotalText">$0</div>
     </div>
 
     <!-- Modal de Personalización -->
@@ -131,6 +149,7 @@
         const PIN_ADMIN = "1234"; 
         let tapCounter = 0;
         let tapTimer = null;
+        let isQrMode = false;
 
         function handleHeaderTap() {
             tapCounter++;
@@ -164,17 +183,23 @@
         let selectedOptions = []; 
         let currentItem = null;
 
-        // Detectar automáticamente la mesa si viene por enlace QR (ej: ?mesa=Mesa+2)
+        // Detectar automáticamente la mesa si viene por enlace QR (ej: ?mesa=Mesa+1)
         window.addEventListener('DOMContentLoaded', () => {
             const urlParams = new URLSearchParams(window.location.search);
             let mesaParam = urlParams.get('mesa');
             if (mesaParam) {
+                isQrMode = true;
                 activeTable = decodeURIComponent(mesaParam);
                 document.getElementById('tableIndicatorText').innerText = `📍 Estás ordenando desde: ${activeTable}`;
-                // Ocultar las pestañas manuales si ya escaneó el QR específico de su mesa para mayor comodidad
                 document.getElementById('tableTabsContainer').style.display = 'none';
+                document.getElementById('multiTableBar').style.display = 'none';
+                document.getElementById('singleCartBar').style.display = 'flex';
+                document.getElementById('barTableName').innerText = `Pedido de ${activeTable}`;
             } else {
+                isQrMode = false;
                 document.getElementById('tableIndicatorText').innerText = `🍽️ Menú General (Mesa seleccionada: ${activeTable})`;
+                document.getElementById('multiTableBar').style.display = 'grid';
+                document.getElementById('singleCartBar').style.display = 'none';
             }
             updateBottomButtons();
         });
@@ -286,13 +311,22 @@
         }
 
         function updateBottomButtons() {
-            const tables = ["Mesa 1", "Mesa 2", "Mesa 3", "Mesa 4", "Para llevar"];
-            tables.forEach(t => {
-                let count = Object.values(carts[t] || {}).reduce((s, i) => s + i.qty, 0);
-                let btnId = t === "Para llevar" ? "btn-Para llevar" : `btn-${t}`;
-                let label = t === "Para llevar" ? "Llevar" : t.replace("Mesa ", "M");
-                document.getElementById(btnId).innerText = `${label} (${count})`;
-            });
+            if (isQrMode) {
+                let currentCart = carts[activeTable] || {};
+                let count = Object.values(currentCart).reduce((s, i) => s + i.qty, 0);
+                let total = Object.values(currentCart).reduce((s, i) => s + (i.price * i.qty), 0);
+                
+                document.getElementById('barItemsText').innerText = count === 1 ? '1 producto seleccionado' : `${count} productos seleccionados`;
+                document.getElementById('barTotalText').innerText = `$${total}`;
+            } else {
+                const tables = ["Mesa 1", "Mesa 2", "Mesa 3", "Mesa 4", "Para llevar"];
+                tables.forEach(t => {
+                    let count = Object.values(carts[t] || {}).reduce((s, i) => s + i.qty, 0);
+                    let btnId = t === "Para llevar" ? "btn-Para llevar" : `btn-${t}`;
+                    let label = t === "Para llevar" ? "Llevar" : t.replace("Mesa ", "M");
+                    document.getElementById(btnId).innerText = `${label} (${count})`;
+                });
+            }
         }
 
         function abrirCart(location) {
