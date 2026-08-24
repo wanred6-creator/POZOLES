@@ -48,7 +48,7 @@
     <div class="container" id="main-view">
         <p id="tableIndicatorText" style="font-size: 0.85rem; font-weight: bold; color: #d9534f; margin-bottom: 8px; text-align: center; background: #fdf2f2; padding: 6px; border-radius: 6px;"></p>
         
-        <!-- Pestañas de respaldo por si entran directo sin QR -->
+        <!-- Pestañas de respaldo para menú general -->
         <div class="table-tabs" id="tableTabsContainer">
             <button class="table-tab active" onclick="setActiveTable('Mesa 1')">Mesa 1</button>
             <button class="table-tab" onclick="setActiveTable('Mesa 2')">Mesa 2</button>
@@ -72,7 +72,7 @@
             <p id="gpsStatusText" style="font-size: 0.75rem; color: #333; margin-top: 6px; font-weight: bold;"></p>
         </div>
 
-        <!-- Generador de los 5 Códigos QR -->
+        <!-- Generador de Códigos QR -->
         <div style="background: #f9f9f9; padding: 12px; border-radius: 8px; margin-top: 15px; border: 1px solid #ddd;">
             <h4 style="font-size: 0.9rem; margin-bottom: 6px; color: #333;">🖨️ Generador de QR por Mesa:</h4>
             <p style="font-size: 0.75rem; color: #666; margin-bottom: 8px;">Pega tu enlace base de GitHub (ej: https://usuario.github.io/repo/):</p>
@@ -87,7 +87,7 @@
         <button class="btn-admin" style="background:#666; margin-top:20px" onclick="resetStats()">🗑️ Borrar Historial de Ventas</button>
     </div>
 
-    <!-- Barra Inferior Múltiple (Solo menú general) -->
+    <!-- Barra Inferior Múltiple (Menú General) -->
     <div class="bottom-bar-multi" id="multiTableBar">
         <button class="bottom-btn" onclick="abrirCart('Mesa 1')" id="btn-Mesa 1">M1 (0)</button>
         <button class="bottom-btn" onclick="abrirCart('Mesa 2')" id="btn-Mesa 2">M2 (0)</button>
@@ -96,7 +96,7 @@
         <button class="bottom-btn llevar" onclick="abrirCart('Para llevar')" id="btn-Para llevar">Llevar (0)</button>
     </div>
 
-    <!-- Barra Flotante de Previsualización (Cuando entran por QR de Mesa) -->
+    <!-- Barra Flotante de Previsualización (Modo QR por Mesa) -->
     <div class="bottom-bar-single" id="singleCartBar" onclick="abrirCart(activeTable)" style="display: none;">
         <div style="display: flex; align-items: center; gap: 10px;">
             <span style="font-size: 1.4rem;">🛒</span>
@@ -176,14 +176,18 @@
             { id: 12, name: "Café", category: "Bebidas", price: 20, options: [], img: "cafe.jpg", hasTakeout: false, isMulti: false }
         ];
 
-        let carts = { "Mesa 1": {}, "Mesa 2": {}, "Mesa 3": {}, "Mesa 4": {}, "Para llevar": {} };
+        // Cargar carritos desde localStorage si existen, o inicializarlos vacíos
+        let carts = JSON.parse(localStorage.getItem('cartsData')) || { "Mesa 1": {}, "Mesa 2": {}, "Mesa 3": {}, "Mesa 4": {}, "Para llevar": {} };
         let activeTable = "Mesa 1";
         let currentCartLocation = "Mesa 1";
         let selectedSize = null;
         let selectedOptions = []; 
         let currentItem = null;
 
-        // Detectar automáticamente la mesa si viene por enlace QR (ej: ?mesa=Mesa+1)
+        function saveCarts() {
+            localStorage.setItem('cartsData', JSON.stringify(carts));
+        }
+
         window.addEventListener('DOMContentLoaded', () => {
             const urlParams = new URLSearchParams(window.location.search);
             let mesaParam = urlParams.get('mesa');
@@ -306,6 +310,7 @@
                 qty: (carts[activeTable][key]?.qty || 0) + 1 
             };
 
+            saveCarts();
             document.getElementById('customModal').style.display = 'none';
             updateBottomButtons();
         }
@@ -357,6 +362,7 @@
             if (!carts[location][key]) return;
             carts[location][key].qty += delta;
             if(carts[location][key].qty <= 0) delete carts[location][key];
+            saveCarts();
             updateBottomButtons();
             abrirCart(location);
         }
@@ -364,12 +370,12 @@
         function limpiarCarritoActual() {
             if(confirm(`¿Limpiar el pedido de ${currentCartLocation}?`)) {
                 carts[currentCartLocation] = {};
+                saveCarts();
                 updateBottomButtons();
                 abrirCart(currentCartLocation);
             }
         }
 
-        // Validación por GPS antes de enviar
         function enviarWhatsAppValidado() {
             let currentCart = carts[currentCartLocation] || {};
             if(Object.keys(currentCart).length === 0) return alert("Este pedido está vacío");
@@ -438,6 +444,7 @@
             localStorage.setItem('orders', JSON.stringify(orders));
             
             carts[currentCartLocation] = {};
+            saveCarts();
             updateBottomButtons();
             document.getElementById('cartModal').style.display = 'none';
             
